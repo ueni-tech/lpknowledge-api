@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      # ① アプリのソースコードは bind-mount でホットリロード（フェーズ1と同様）
+      - ./:/app:cached          # Linux なら :cached を外しても OK
+      # ② Chroma の永続領域は named-volume で維持（フェーズ1と同様）
+      - vectorstore:/app/vectorstore
+      - uploads:/app/uploads    # アップロードファイル用ボリューム追加
+    environment:
+      - PYTHONPATH=/app
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ALLOW_RESET=true        # Chroma の全削除を許可（開発用）
+      - DEBUG=true
+      - APP_NAME=LPナレッジ検索API
+      - APP_VERSION=0.1.0
+      - PERSIST_DIRECTORY=/app/vectorstore
+      - UPLOAD_DIRECTORY=/app/uploads
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  vectorstore:            # named-volume の宣言。実体は Docker が管理
+  uploads:                # アップロードファイル用の永続ボリューム
