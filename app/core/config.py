@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     upload_directory: str = "./uploads"
 
     class Config:
-        env_file = ".env"
+        env_file = "../.env"
         env_file_encoding = "utf-8"
         case_sensitive = False
 
@@ -61,3 +61,6 @@ class Settings(BaseSettings):
         """必要なディレクトリを作成"""
         self.persist_path.mkdir(parents=True, exist_ok=True)
         self.upload_path.mkdir(parents=True, exist_ok=True)
+
+
+settings = Settings()
