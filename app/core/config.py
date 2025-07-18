@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     allowed_extensions: list[str] = ["pdf"]
     upload_directory: str = "./uploads"
 
-    class Config:
+    class ConfigDict:
         env_file = "../.env"
         env_file_encoding = "utf-8"
         case_sensitive = False

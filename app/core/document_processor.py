@@ -8,11 +8,13 @@ import gc
 import shutil
 from pathlib import Path
 
-import PyPDF2
+import pypdf
 import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from .config import settings
+
+import asyncio
 
 
 class DocumentProcessor:
@@ -40,7 +42,7 @@ class DocumentProcessor:
         """
         try:
             with open(file_path, "rb") as file:
-                reader = PyPDF2.PdfFileReader(file)
+                reader = pypdf.PdfReader(file)
 
                 if len(reader.pages) == 0:
                     raise ValueError("PDFにページが含まれていません")
