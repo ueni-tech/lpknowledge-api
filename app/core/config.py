@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     upload_directory: str = "./uploads"
 
     class ConfigDict:
-        env_file = "../.env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
 
