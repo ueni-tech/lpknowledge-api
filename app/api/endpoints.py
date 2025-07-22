@@ -21,6 +21,7 @@ from ..models.schemas import (
     SearchResponse,
     SystemInfoResponse,
     UploadResponse,
+    DocumentInfo,
 )
 
 
@@ -47,7 +48,10 @@ async def upload_document(
         rag_engine: RAGエンジンインスタンス
 
     Returns:
-        HTTPExeption: ファイル処理エラーの場合
+        アップロード結果
+
+    Raises:
+        HTTPException: ファイル処理エラーの場合
     """
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -131,6 +135,9 @@ async def ask_question(
         rag_engine: RAGエンジンインスタンス
 
     Returns:
+        生成された回答
+
+    Raises:
         HTTPException: 処理エラーの場合
     """
     try:
@@ -140,7 +147,7 @@ async def ask_question(
                 status_code=400, detail="まずPDFファイルをアップロードしてください"
             )
 
-        logger.info(f"質問処理開始: {request.question[:50]}")
+        logger.info(f"質問処理開始: {request.question[:50]}...")
 
         result = await rag_engine.generate_answer(
             question=request.question, top_k=request.top_k
@@ -161,4 +168,51 @@ async def ask_question(
         logger.error(f"質問処理エラー: {e}")
         raise HTTPException(
             status_code=500, detail=f"回答生成中にエラーが発生しました: {str(e)}"
+        )
+
+
+@router.post("/search", response_model=SearchResponse)
+async def search_documents(
+    request: QuestionRequest, rag_engine: RAGEngine = Depends(get_rag_engine)
+) -> SearchResponse:
+    """関連文書の検索（回答生成なし）
+    Args:
+        request: 検索リクエスト
+        rag_engine: RAGエンジンインスタンス
+
+    Returns:
+        検索結果
+
+    Raises:
+        HTTPException: 処理エラーの場合
+    """
+    try:
+        system_info = await rag_engine.get_system_info()
+        if not system_info.get("vectorstore_ready"):
+            raise HTTPException(
+                status_code=400, detail="まずPDFファイルをアップロードしてください"
+            )
+
+        logger.info(f"文書検索開始: {request.question[:50]}...")
+
+        documents = await rag_engine.search_documents(
+            query=request.question, top_k=request.top_k
+        )
+
+        document_list = [
+            DocumentInfo(content=doc.page_content, metadata=doc.metadata)
+            for doc in documents
+        ]
+
+        logger.info(f"文書検索完了: {len(documents)}件")
+
+        return SearchResponse(
+            documents=document_list, query=request.question, total_found=len(documents)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"文書検索エラー: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"文書検索中にエラーが発生しました: {str(e)}"
         )
