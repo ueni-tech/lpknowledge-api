@@ -30,7 +30,7 @@ class DocumentProcessor:
             length_function=len,
         )
 
-    async def extract_text_form_pdf(self, file_path: Path) -> str:
+    async def extract_text_from_pdf(self, file_path: Path) -> str:
         """PDFからテキスト抽出
         Args:
             file_path: PDFファイルのパス

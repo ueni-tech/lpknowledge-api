@@ -1,3 +1,4 @@
+# app/main.py
 """
 FastAPIアプリケーションのメインエントリーポイント
 """
@@ -17,7 +18,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from .api.endpoints import router as api_router
 from .core.config import settings
-from .core.rag_engine import RAGEngine
+from .core.dependencies import initialize_rag_engine, get_rag_engine_instance  # 変更
 from .models.schemas import HealthResponse
 
 # タイムゾーン設定
@@ -30,21 +31,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# グローバルRAGエンジンインスタンス
-rag_engine: RAGEngine = RAGEngine()
 
-
-# NOTE
-# @asynccontextmanager を使った関数は、FastAPIのライフサイクル管理（アプリケーションの起動時・終了時の処理）に利用できる
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """アプリケーションのライフサイクル管理
-    起動時にRAGエンジンを初期化し、終了時にクリーンアップを行う
-    """
-
+    """アプリケーションのライフサイクル管理"""
     logger.info("アプリケーションを起動中...")
     try:
-        await rag_engine.initialize()
+        await initialize_rag_engine()  # 変更
         logger.info("RAGエンジンの初期化が完了しました")
     except Exception as e:
         logger.error(f"RAGエンジンの初期化に失敗しました: {e}")
@@ -56,10 +49,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    """FastAPIアプリケーションを作成
-    Returns:
-        設定済みのFastAPIアプリケーション
-    """
+    """FastAPIアプリケーションを作成"""
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -69,11 +59,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CROS設定
+    # CORS設定
     app.add_middleware(
         CORSMiddleware,
-        # TODO
-        # 本番用ドメインを設定する
         allow_origins=["*"] if settings.debug else ["https://yourdomain.com"],
         allow_credentials=True,
         allow_methods=["*"],
@@ -108,8 +96,16 @@ async def root():
 async def health_check():
     """詳細なヘルスチェック"""
     try:
-        sytem_info = await rag_engine.get_system_info()
-        status = "healthy" if sytem_info["status"] == "initialized" else "degraded"
+        rag_engine = get_rag_engine_instance()
+        if rag_engine is None:
+            raise HTTPException(
+                status_code=503, detail="RAGエンジンが初期化されていません"
+            )
+
+        system_info = (
+            await rag_engine.get_system_info()
+        )  # typo修正: sytem_info -> system_info
+        status = "healthy" if system_info["status"] == "initialized" else "degraded"
 
         return HealthResponse(
             status=status,
@@ -119,13 +115,6 @@ async def health_check():
     except Exception as e:
         logger.error(f"ヘルスチェックでエラーが発生しました: {e}")
         raise HTTPException(status_code=503, detail="Service temporarily unavailable")
-
-
-def get_rag_engine() -> RAGEngine:
-    """RAGエンジンインスタンスを取得
-    この関数は依存性注入のために使用されます
-    """
-    return rag_engine
 
 
 if __name__ == "__main__":
