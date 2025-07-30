@@ -143,3 +143,38 @@ uploads/
 temp/
 logs/
 *.pdf
+
+# lpknowledge-api/.gitignore に以下を追加
+
+# フロントエンド関連
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+
+# Next.js環境変数
+frontend/.env*.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Vercel
+frontend/.vercel
+
+# typescript
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# バックエンド関連
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.venv/
+backend/dist/
+backend/build/
+
+# 共通
+.DS_Store
+*.log
+.env
+.env.local
