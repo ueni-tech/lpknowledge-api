@@ -153,6 +153,9 @@ frontend/out/
 frontend/build/
 frontend/dist/
 
+# フロントエンドのlib/は無視しない
+!frontend/src/lib/
+
 # Next.js環境変数
 frontend/.env*.local
 frontend/.env.development.local
