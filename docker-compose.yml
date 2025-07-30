@@ -3,24 +3,20 @@ version: "3.9"
 services:
   api:
     build: 
-      context: .
+      context: ./backend  # ← 変更：. から ./backend に
       args:
-        INSTALL_DEV: "true"  # 開発環境では開発用依存関係もインストール
-    # FastAPI を明示起動（Streamlitからuvicornに変更）
+        INSTALL_DEV: "true"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"  # Streamlitの8501から8000に変更
+      - "8000:8000"
     volumes:
-      # ① アプリのソースコードは bind-mount でホットリロード（フェーズ1と同様）
-      - ./:/app:cached          # Linux なら :cached を外しても OK
-      # ② Chroma の永続領域は named-volume で維持（フェーズ1と同様）
+      - ./backend:/app:cached  # ← 変更：./ から ./backend に
       - vectorstore:/app/vectorstore
-      - uploads:/app/uploads    # アップロードファイル用ボリューム追加
+      - uploads:/app/uploads
     environment:
       - PYTHONPATH=/app
-      - OPENAI_API_KEY=${OPENAI_API_KEY}   # .env から読み込む想定
-      - ALLOW_RESET=true                   # Chroma の全削除を許可（開発用）
-      # FastAPI開発用設定
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ALLOW_RESET=true
       - DEBUG=true
       - APP_NAME=LPナレッジ検索API
       - APP_VERSION=0.1.0
@@ -36,5 +32,5 @@ services:
       start_period: 40s
 
 volumes:
-  vectorstore:            # named-volume の宣言。実体は Docker が管理（フェーズ1と同様）
-  uploads:                # アップロードファイル用の永続ボリューム
+  vectorstore:
+  uploads:

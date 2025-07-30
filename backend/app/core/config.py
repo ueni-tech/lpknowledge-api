@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # ベクトルストア設定
     persist_directory: str = "./vectorstore"
-    embedding_model: str = "text-enbedding-3-small"
+    embedding_model: str = "text-embedding-3-small"
 
     # LLM設定
     default_model: str = "gpt-4o-mini"

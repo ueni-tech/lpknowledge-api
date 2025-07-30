@@ -11,12 +11,13 @@ try:
 except ImportError:
     from pytz import timezone as ZoneInfo  # それ以前はpytzを使う
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from .api.endpoints import router as api_router
 from .core.config import settings
+from .core.dependencies import get_rag_engine, initialize_rag_engine
 from .core.rag_engine import RAGEngine
 from .models.schemas import HealthResponse
 
@@ -30,9 +31,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# グローバルRAGエンジンインスタンス
-rag_engine: RAGEngine = RAGEngine()
-
 
 # NOTE
 # @asynccontextmanager を使った関数は、FastAPIのライフサイクル管理（アプリケーションの起動時・終了時の処理）に利用できる
@@ -44,7 +42,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("アプリケーションを起動中...")
     try:
-        await rag_engine.initialize()
+        await initialize_rag_engine()
         logger.info("RAGエンジンの初期化が完了しました")
     except Exception as e:
         logger.error(f"RAGエンジンの初期化に失敗しました: {e}")
@@ -105,7 +103,7 @@ async def root():
 
 
 @app.get("/health", response_model=HealthResponse)
-async def health_check():
+async def health_check(rag_engine: RAGEngine = Depends(get_rag_engine)):
     """詳細なヘルスチェック"""
     try:
         sytem_info = await rag_engine.get_system_info()
@@ -119,22 +117,3 @@ async def health_check():
     except Exception as e:
         logger.error(f"ヘルスチェックでエラーが発生しました: {e}")
         raise HTTPException(status_code=503, detail="Service temporarily unavailable")
-
-
-def get_rag_engine() -> RAGEngine:
-    """RAGエンジンインスタンスを取得
-    この関数は依存性注入のために使用されます
-    """
-    return rag_engine
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "app.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug,
-        workers=1 if settings.debug else settings.workers,
-    )

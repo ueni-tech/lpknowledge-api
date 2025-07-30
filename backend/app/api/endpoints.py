@@ -13,7 +13,9 @@ from fastapi.responses import JSONResponse
 
 from ..core.document_processor import DocumentProcessor
 from ..core.rag_engine import RAGEngine
-from ..main import get_rag_engine
+from ..core.dependencies import (
+    get_rag_engine,
+)
 from ..models.schemas import (
     AnswerResponse,
     ErrorResponse,
@@ -215,4 +217,61 @@ async def search_documents(
         logger.error(f"文書検索エラー: {e}")
         raise HTTPException(
             status_code=500, detail=f"文書検索中にエラーが発生しました: {str(e)}"
+        )
+
+
+@router.get("/system/info", response_model=SystemInfoResponse)
+async def get_system_info(
+    rag_engine: RAGEngine = Depends(get_rag_engine),
+) -> SystemInfoResponse:
+    """システム情報を取得
+
+    Args:
+        rag_engine: RAGエンジンインスタンス
+
+    Returns:
+        システム情報
+    """
+    try:
+        info = await rag_engine.get_system_info()
+
+        return SystemInfoResponse(
+            status=info["status"],
+            embedding_model=info["embedding_model"],
+            llm_model=info["llm_model"],
+            vectorstore_ready=info["vectorstore_ready"],
+            document_count=info.get("document_count"),
+            collection_id=info.get("collection_id"),
+        )
+
+    except Exception as e:
+        logger.error(f"システム情報取得エラー: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"システム情報の取得に失敗しました: {str(e)}"
+        )
+
+
+@router.post("/system/reset")
+async def reset_system(
+    rag_engine: RAGEngine = Depends(get_rag_engine),
+) -> dict[str, str]:
+    """ベクトルストアをリセット
+
+    Args:
+        rag_engine: RAGエンジンインスタンス
+
+    Returns:
+        リセット結果
+    """
+    try:
+        logger.info("システムリセット開始")
+        result = await rag_engine.reset_vectorstore()
+        logger.info("システムリセット完了")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"システムリセットエラー: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"システムリセットに失敗しました: {str(e)}"
         )
